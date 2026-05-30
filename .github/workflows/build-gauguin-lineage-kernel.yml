@@ -1,7 +1,7 @@
 name: Build Redmi Note 9 Pro Kernel (Lineage-19.1)
 
 on:
-  workflow_dispatch: # 允许在 GitHub Actions 页面手动点击运行
+  workflow_dispatch:
 
 permissions:
   contents: write # 赋予自动发布 Release 固件包的权限
@@ -11,46 +11,43 @@ jobs:
     name: Build Kernel for Gauguin
     runs-on: ubuntu-22.04
     steps:
-      - name: 安装依赖
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          repository: LineageOS/android_kernel_xiaomi_gauguin
+          ref: lineage-19.1
+          path: kernel-source
+          depth: 1
+
+      - name: Patch Kernel Makefile
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-          coccinelle
+          cd kernel-source
+          # 1. 删掉导致 Clang 报错的断言
+          sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
+          # 2. 将过旧内核需要的链接器硬编码进 Makefile
+          sed -i 's/^ARCH\s\??=/LD := ld.lld\nARCH ?=/' Makefile
+
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
         with:
-          # 1. 基础内核与分支配置
-          kernel-url: https://github.com/LineageOS/android_kernel_xiaomi_gauguin
-          kernel-branch: lineage-19.1
-          # 特别注意：此处直接传入 arch/arm64/configs/ 下的相对文件路径
+          # 1. 指定本地已打好补丁的内核源码路径
+          kernel-url: ./kernel-source/
           config: vendor/gauguin_user_defconfig
           arch: arm64
-
-          custom-commands: |
-            echo "正在对内核源码应用编译环境兼容性修复..."
-            # 1. 直接移除 Makefile 中阻碍编译的 CLANG_TRIPLE 格式断言检查
-            sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
-            # 2. 强行在顶层 Makefile 的初期注入 LD=ld.lld 参数，避开 Action 的过滤拦截
-            sed -i 's/^ARCH\s\??=/LD := ld.lld\nARCH ?=/' Makefile
           
-          
-          extra-make-args: '["CLANG_TRIPLE=aarch64-linux-gnu-", "LD=ld.lld"]'
-          
-          
-          # 2. 编译工具链设置 (匹配 Android 12 基底)
+          # 2. 编译工具链设置 (完美匹配您原本的配置)
           aosp-clang: true
           aosp-gcc: true
           android-version: 12
           aosp-clang-version: r383902
           
-          # 3. 功能特性支持 (开启 KernelSU 与 LXC 容器)
+          # 3. 核心功能支持 (完整补回原配置要求)
           ksu: true
-          ksu-version: v0.9.5 # 针对 4.19 旧版本内核，建议使用稳定的经典版以防报错
+          ksu-version: v0.9.5
           lxc: true
-          lxc-patch: false     # 自动应用 LXC 兼容性补丁
+          lxc-patch: false
           
           # 4. 打包与自动发布
-          anykernel3: true    # 自动打包为可直接在 Recovery 刷入的 Zip 压缩包
-          release: true       # 编译成功后自动在仓库的 Releases 页面生成固件
+          anykernel3: true
+          release: true
           access-token: ${{ secrets.GITHUB_TOKEN }}
-
