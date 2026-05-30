@@ -14,7 +14,16 @@ jobs:
     container:
       # 该镜像内置了 AOSP/LineageOS 所需的所有旧版依赖和工具链环境
       image: lineageos4microg/docker-lineage-cicd:lineage-19.0
+      options: --user root
     steps:
+      - name: Prepare Ubuntu Environment
+        # 官方精简镜像缺少基本工具，我们需要在这里补齐编译 Android 11 所需的完整依赖
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y \
+          sudo
+          
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
         with:
