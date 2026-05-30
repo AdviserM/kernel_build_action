@@ -23,7 +23,7 @@ jobs:
           # 2. 现代编译工具链设置 (适应 Android 16/GKI 基底)
           aosp-clang: true
           aosp-gcc: true
-          android-version: 16 # 使用高版本 AOSP 工具链以兼容新版内核语法
+          android-version: 14 # 使用高版本 AOSP 工具链以兼容新版内核语法
           
           # 3. 核心功能支持 (升级至现代版本)
           ksu: true
