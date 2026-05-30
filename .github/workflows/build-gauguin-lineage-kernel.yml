@@ -26,6 +26,9 @@ jobs:
           config: vendor/gauguin_user_defconfig
           arch: arm64
           
+          extra-make-args: '["CLANG_TRIPLE=aarch64-linux-gnu-", "LD=ld.lld"]'
+          
+          
           # 2. 编译工具链设置 (匹配 Android 12 基底)
           aosp-clang: true
           aosp-gcc: true
