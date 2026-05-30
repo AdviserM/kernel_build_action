@@ -48,6 +48,12 @@ jobs:
           # 5. dtc 把重复属性名当 error，加 -Wno 跳过
           echo 'DTC_FLAGS += -Wno-duplicate_property_names' >> Makefile
 
+          # 6. 修复 prefer_spread_on_idle 函数签名不匹配
+          #    fair.c 传 2 个参数 (cpu, bool)，但 walt.h 只声明了 1 个参数 (cpu)
+          #    将 static inline bool prefer_spread_on_idle(int cpu)
+          #    改为 static inline bool prefer_spread_on_idle(int cpu, bool new_idle)
+          sed -i 's/static inline bool prefer_spread_on_idle(int cpu)/static inline bool prefer_spread_on_idle(int cpu, bool new_idle)/' kernel/sched/walt.h
+
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
         with:
