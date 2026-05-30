@@ -22,7 +22,7 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y \
-          sudo
+          sudo coccinelle
           
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
