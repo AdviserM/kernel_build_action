@@ -1,10 +1,10 @@
-name: Build Redmi Note 9 Pro Kernel (Lineage-19.1)
+name: Build Redmi Note 9 Pro Kernel (Lineage-18.1)
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write # 赋予自动发布 Release 固件包的权限
+  contents: write
 
 jobs:
   build-kernel:
@@ -17,52 +17,52 @@ jobs:
           repository: LineageOS/android_kernel_xiaomi_gauguin
           ref: lineage-18.1
           path: kernel-source
-          depth: 1
-
-      - name: Disable Werror
-        run: |
-           find kernel-source/ -name "Makefile" -o -name "Kbuild" | xargs sed -i 's/-Werror//g'
-           find kernel-source/ -name "*.mk" | xargs sed -i 's/-Werror//g'
+          fetch-depth: 1
 
       - name: Patch Kernel Source
         run: |
           cd kernel-source
-          # 1. 删掉导致 Clang 报错的断言
-          sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
-          # 2. 将过旧内核需要的链接器硬编码进 Makefile
-          sed -i 's/^ARCH\s\??=/LD := ld.lld\nARCH ?=/' Makefile
-          
-          # 🌟 核心修复：解决新版 Ubuntu GCC 编译旧内核 dtc 导致的 yylloc 重复定义报错
-          if [ -f scripts/dtc/dtc-lex.l ]; then
-            sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lex.l
-          fi
-          if [ -f scripts/dtc/dtc-lexer.lex.c_shipped ]; then
-            sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.lex.c_shipped
-          fi
+
+          # 1. 全局去除 -Werror（Makefile/Kbuild/.mk）
+          find . -type f \( -name "Makefile" -o -name "Kbuild" -o -name "*.mk" \) \
+            -exec sed -i 's/-Werror//g' {} +
+
+          # 2. 修复 yylloc 多重定义（bison 3.8+ 兼容）
+          #    覆盖所有可能的文件名变体
+          for f in \
+            scripts/dtc/dtc-lexer.l \
+            scripts/dtc/dtc-lex.l \
+            scripts/dtc/dtc-lexer.lex.c_shipped \
+            scripts/dtc/dtc-lexer.lex.c
+          do
+            if [ -f "$f" ]; then
+              sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$f"
+              echo "Patched $f"
+            fi
+          done
 
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
         with:
-          # 1. 指定本地已打好补丁的内核源码路径
           kernel-url: ./kernel-source/
           config: vendor/gauguin_user_defconfig
           arch: arm64
 
-          extra-make-args: '["W=1", "HOSTCFLAGS=-Wno-error"]'
-          
-          # 2. 编译工具链设置
+          # 关键修复：
+          #   HOSTCC=gcc        → 用系统 GCC 编译 host 工具（scripts/dtc 等），
+          #                        避免 clang-11 被当 HOSTCC 遇到不兼容参数
+          #   HOSTCFLAGS=...    → 系统 GCC 编译 host 工具时也关闭 -Werror
+          #   移除了 W=1        → W=1 会开启大量额外 warning，老内核过不了
+          extra-make-args: '["HOSTCC=gcc", "HOSTCFLAGS=-Wno-error"]'
+
           aosp-clang: true
           aosp-gcc: true
           android-version: 11
           aosp-clang-version: r383902
-          
-          # 3. 核心功能支持
+
           ksu: false
-          ksu-version: v0.9.5
           lxc: false
-          lxc-patch: false
-          
-          # 4. 打包与自动发布
+
           anykernel3: true
           release: true
           access-token: ${{ secrets.GITHUB_TOKEN }}
