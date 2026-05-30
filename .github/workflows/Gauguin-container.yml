@@ -49,7 +49,7 @@ jobs:
           android-version: 11
           aosp-clang-version: r383902
           ksu: false
-          lxc: true
+          lxc: false
           anykernel3: true
           release: true
           access-token: ${{ secrets.GITHUB_TOKEN }}
