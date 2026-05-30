@@ -1,4 +1,4 @@
-name: Build Redmi Note 9 Pro Kernel (Lineage-18.1)
+name: Build Redmi Note 9 Pro Kernel (Lineage-19.1)
 
 on:
   workflow_dispatch:
@@ -8,28 +8,37 @@ permissions:
 
 jobs:
   build-kernel:
-    name: Build Kernel for Gauguin Lineage-18.1
-    runs-on: ubuntu-latest
-     # 关键：指定在第三方维护的 ubuntu:20.04 编译专用容器内执行
-    container:
-      # 该镜像内置了 AOSP/LineageOS 所需的所有旧版依赖和工具链环境
-      image: lineageos4microg/docker-lineage-cicd:lineage-19.0
-      options: --user root
+    name: Build Kernel for Gauguin
+    runs-on: ubuntu-22.04
     steps:
-      - name: Prepare Ubuntu Environment
-        # 官方精简镜像缺少基本工具，我们需要在这里补齐编译 Android 11 所需的完整依赖
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update
-          apt-get install -y \
-          sudo
-          
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
         with:
           repository: LineageOS/android_kernel_xiaomi_gauguin
           ref: lineage-18.1
           path: kernel-source
+          depth: 1
+
+      - name: Disable Werror
+        run: |
+           find kernel-source/ -name "Makefile" -o -name "Kbuild" | xargs sed -i 's/-Werror//g'
+           find kernel-source/ -name "*.mk" | xargs sed -i 's/-Werror//g'
+
+      - name: Patch Kernel Source
+        run: |
+          cd kernel-source
+          # 1. 删掉导致 Clang 报错的断言
+          sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
+          # 2. 将过旧内核需要的链接器硬编码进 Makefile
+          sed -i 's/^ARCH\s\??=/LD := ld.lld\nARCH ?=/' Makefile
+          
+          # 🌟 核心修复：解决新版 Ubuntu GCC 编译旧内核 dtc 导致的 yylloc 重复定义报错
+          if [ -f scripts/dtc/dtc-lex.l ]; then
+            sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lex.l
+          fi
+          if [ -f scripts/dtc/dtc-lexer.lex.c_shipped ]; then
+            sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.lex.c_shipped
+          fi
 
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
@@ -38,6 +47,8 @@ jobs:
           kernel-url: ./kernel-source/
           config: vendor/gauguin_user_defconfig
           arch: arm64
+
+          extra-make-args: '["W=1", "HOSTCFLAGS=-Wno-error"]'
           
           # 2. 编译工具链设置
           aosp-clang: true
