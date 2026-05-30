@@ -1,0 +1,38 @@
+name: Build Redmi Note 9 Pro Kernel (Lineage-23.2)
+
+on:
+  workflow_dispatch: # 允许在 GitHub Actions 页面手动点击运行
+
+permissions:
+  contents: write # 赋予自动发布 Release 固件包的权限
+
+jobs:
+  build-kernel:
+    name: Build Kernel for Gauguin
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Build Android Kernel
+        uses: dabao1955/kernel_build_action@main
+        with:
+          # 1. 基础内核与全新分支配置
+          kernel-url: https://github.com/LineageOS/android_kernel_xiaomi_gauguin
+          kernel-branch: lineage-23.2
+          config: defconfig
+          arch: arm64
+          
+          # 2. 现代编译工具链设置 (适应 Android 16/GKI 基底)
+          aosp-clang: true
+          aosp-gcc: true
+          android-version: 16 # 使用高版本 AOSP 工具链以兼容新版内核语法
+          
+          # 3. 核心功能支持 (升级至现代版本)
+          ksu: true
+          ksu-version: v1.0.1 # 适配新版内核的 KernelSU 稳定版
+          lxc: true
+          lxc-patch: true     # 自动应用 LXC 容器兼容性补丁
+          
+          # 4. 打包与自动发布
+          anykernel3: true    # 自动打包为可直接在 Recovery 刷入的 Zip 压缩包
+          release: true       # 编译成功后自动在仓库的 Releases 页面生成固件
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+
