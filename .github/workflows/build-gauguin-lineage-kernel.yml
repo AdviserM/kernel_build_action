@@ -15,7 +15,7 @@ jobs:
         uses: dabao1955/kernel_build_action@main
         with:
           # 1. 基础内核与分支配置
-          kernel-url: https://github.com
+          kernel-url: https://github.com/LineageOS/android_kernel_xiaomi_gauguin
           kernel-branch: lineage-19.1
           # 特别注意：此处直接传入 arch/arm64/configs/ 下的相对文件路径
           config: vendor/gauguin_user_defconfig
