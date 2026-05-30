@@ -11,6 +11,11 @@ jobs:
     name: Build Kernel for Gauguin
     runs-on: ubuntu-22.04
     steps:
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+          coccinelle
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
         with:
