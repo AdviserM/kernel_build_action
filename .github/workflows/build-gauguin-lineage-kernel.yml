@@ -8,8 +8,12 @@ permissions:
 
 jobs:
   build-kernel:
-    name: Build Kernel for Gauguin
-    runs-on: ubuntu-18.04
+    name: Build Kernel for Gauguin Lineage-18.1
+    runs-on: ubuntu-latest
+     # 关键：指定在第三方维护的 ubuntu:20.04 编译专用容器内执行
+    container:
+      # 该镜像内置了 AOSP/LineageOS 所需的所有旧版依赖和工具链环境
+      image: docker.io/fr3akyphantom/ubuntu-build-env:20.04
     steps:
       - name: Checkout Kernel Source
         uses: actions/checkout@v4
