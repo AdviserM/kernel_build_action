@@ -23,20 +23,20 @@ jobs:
         run: |
           cd kernel-source
 
-          # 1. 全局去除 -Werror
-          find . -type f \( -name "Makefile" -o -name "Kbuild" -o -name "*.mk" \) \
-            -exec sed -i 's/-Werror//g' {} +
+          # 1. 强制 HOSTCC 使用系统 GCC（绝对路径，避免被 PATH 中的 clang 干扰）
+          sed -i '1i HOSTCC = /usr/bin/gcc' Makefile
 
-          # 2. 强制 HOSTCC=gcc（写死在 Makefile 顶部绕过 action 的变量过滤）
-          #    让系统 GCC 编译 host 工具（scripts/dtc 等），避免 clang-11 不兼容参数报错
-          sed -i '1i HOSTCC = gcc' Makefile
+          # 2. 追加 -Wno-error 覆盖所有 -Werror
+          #    关键：不能用 sed 删除 -Werror！
+          #    sed 's/-Werror//g' 会把 -Werror-implicit-function-declaration
+          #    变成 -implicit-function-declaration（不合法参数，clang 报错）
+          echo 'KBUILD_CFLAGS += -Wno-error' >> Makefile
+          echo 'KBUILD_HOSTCFLAGS += -Wno-error' >> Makefile
 
-          # 3. 删除 CLANG_TRIPLE 检查
-          #    action 设置的 CLANG_TRIPLE 是 GCC 路径前缀（含 "android"），
-          #    触发了 Makefile:489 的 $(error ...)
+          # 3. 删除 CLANG_TRIPLE 检查（action 传入的 CLANG_TRIPLE 含 "android" 触发此错误）
           sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
 
-          # 4. 修复 yylloc 多重定义（bison 3.8+ 兼容）
+          # 4. 修复 yylloc 多重定义（Ubuntu 22.04 bison 3.8+ 不再声明为 static）
           for f in scripts/dtc/dtc-lexer.l scripts/dtc/dtc-lex.l \
                    scripts/dtc/dtc-lexer.lex.c_shipped scripts/dtc/dtc-lexer.lex.c; do
             if [ -f "$f" ]; then
@@ -51,18 +51,12 @@ jobs:
           kernel-url: ./kernel-source/
           config: vendor/gauguin_user_defconfig
           arch: arm64
-
-          # HOSTCC 已在 Makefile 中写死，这里只需要 HOSTCFLAGS
-          extra-make-args: '["HOSTCFLAGS=-Wno-error"]'
-
           aosp-clang: true
           aosp-gcc: true
           android-version: 11
           aosp-clang-version: r383902
-
           ksu: false
           lxc: false
-
           anykernel3: true
           release: true
           access-token: ${{ secrets.GITHUB_TOKEN }}
