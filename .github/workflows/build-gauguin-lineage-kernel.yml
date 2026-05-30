@@ -19,13 +19,21 @@ jobs:
           path: kernel-source
           depth: 1
 
-      - name: Patch Kernel Makefile
+      - name: Patch Kernel Source
         run: |
           cd kernel-source
           # 1. 删掉导致 Clang 报错的断言
           sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
           # 2. 将过旧内核需要的链接器硬编码进 Makefile
           sed -i 's/^ARCH\s\??=/LD := ld.lld\nARCH ?=/' Makefile
+          
+          # 🌟 核心修复：解决新版 Ubuntu GCC 编译旧内核 dtc 导致的 yylloc 重复定义报错
+          if [ -f scripts/dtc/dtc-lex.l ]; then
+            sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lex.l
+          fi
+          if [ -f scripts/dtc/dtc-lexer.lex.c_shipped ]; then
+            sed -i 's/^YYLTYPE yylloc;/extern YYLTYPE yylloc;/' scripts/dtc/dtc-lexer.lex.c_shipped
+          fi
 
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
@@ -35,13 +43,13 @@ jobs:
           config: vendor/gauguin_user_defconfig
           arch: arm64
           
-          # 2. 编译工具链设置 (完美匹配您原本的配置)
+          # 2. 编译工具链设置
           aosp-clang: true
           aosp-gcc: true
           android-version: 12
           aosp-clang-version: r383902
           
-          # 3. 核心功能支持 (完整补回原配置要求)
+          # 3. 核心功能支持
           ksu: true
           ksu-version: v0.9.5
           lxc: true
