@@ -1,4 +1,4 @@
-name: Docker Build Redmi Note 9 Pro Kernel (Lineage-18.1)
+name: Build Redmi Note 9 Pro Kernel (Lineage-18.1)
 
 on:
   workflow_dispatch:
@@ -36,6 +36,7 @@ jobs:
         run: |
           cd kernel-source
           sed -i '/Clang with Android --target detected. Did you specify CLANG_TRIPLE?/d' Makefile
+          echo 'DTC_FLAGS += -Wno-duplicate_property_names' >> Makefile
 
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
@@ -47,8 +48,8 @@ jobs:
           aosp-gcc: true
           android-version: 11
           aosp-clang-version: r383902
-          ksu: false
-          lxc: false
+          ksu: true
+          lxc: true
           anykernel3: true
           release: true
           access-token: ${{ secrets.GITHUB_TOKEN }}
