@@ -46,7 +46,7 @@ jobs:
           aosp-clang-version: r383902
           
           # 3. 核心功能支持
-          ksu: true
+          ksu: false
           ksu-version: v0.9.5
           lxc: true
           lxc-patch: false
