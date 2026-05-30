@@ -44,6 +44,9 @@ jobs:
               echo "Patched $f"
             fi
           done
+          
+          # 5. dtc 把重复属性名当 error，加 -Wno 跳过
+          echo 'DTC_FLAGS += -Wno-duplicate_property_names' >> Makefile
 
       - name: Build Android Kernel
         uses: dabao1955/kernel_build_action@main
@@ -55,8 +58,8 @@ jobs:
           aosp-gcc: true
           android-version: 11
           aosp-clang-version: r383902
-          ksu: false
-          lxc: false
+          ksu: true
+          lxc: true
           anykernel3: true
           release: true
           access-token: ${{ secrets.GITHUB_TOKEN }}
