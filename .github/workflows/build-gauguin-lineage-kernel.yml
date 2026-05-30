@@ -48,7 +48,7 @@ jobs:
           # 3. 核心功能支持
           ksu: false
           ksu-version: v0.9.5
-          lxc: true
+          lxc: false
           lxc-patch: false
           
           # 4. 打包与自动发布
