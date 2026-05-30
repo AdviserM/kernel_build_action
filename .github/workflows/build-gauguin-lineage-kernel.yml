@@ -36,7 +36,7 @@ jobs:
           ksu: true
           ksu-version: v0.9.5 # 针对 4.19 旧版本内核，建议使用稳定的经典版以防报错
           lxc: true
-          lxc-patch: true     # 自动应用 LXC 兼容性补丁
+          lxc-patch: fasle     # 自动应用 LXC 兼容性补丁
           
           # 4. 打包与自动发布
           anykernel3: true    # 自动打包为可直接在 Recovery 刷入的 Zip 压缩包
